@@ -10,8 +10,9 @@
 .PARAMETER copyUrlToClipboard
     Copy the DS URL to the Windows Clipboard for pasting anywhere
 .PARAMETER copyLongLinkToClipboard
+    Copy Id and Name to HTML fragment
 .PARAMETER copyShortLinkToClipboard
-
+    Copy Id to HTML fragment
 .PARAMETER triageHighPriority
 .PARAMETER triageHighPriority
 .PARAMETER triageLowPriority
@@ -20,12 +21,14 @@
 .PARAMETER triageUnshieldedProductDS
 
 .PARAMETER openInBrowser
+    Open browser window and navigate to Defect Suite in Rally
 .PARAMETER calculateCycleTimes
 .PARAMETER getUuid
+
 .EXAMPLE
 
 #>
-function rqt {
+function Get-DefectSuite {
     param(
         [Parameter(Position=0,Mandatory=$true)]
         [string][alias("ds")] $dsId,
@@ -57,28 +60,79 @@ function rqt {
     function dsApiResponse($dsId){
         Invoke-RestMethod -Uri "https://rally1.rallydev.com/slm/webservice/v2.0/DefectSuite?query=(FormattedID = $dsId)" -Headers @{$hname=$hvalue} | Select-Object QueryResult 
     }
+    function getUUID(){
+        param(
+            [Parameter(ValueFromPipeline)] $dsData
+        )
+        $dsData.QueryResult.Results[0]._refObjectUUID
+    }
+    function getName(){
+        param(
+            [Parameter(ValueFromPipeline)] $dsData
+        )
+        $dsData.QueryResult.Results[0]._refObjectName
+    }
 
     # Lookup Defect Suite
     if($dsId){
-        dsApiResponse($dsId).QueryResult.Results[0]._refObjectName
+        dsApiResponse($dsId) | getName
     }
     if($openDefectSuite){
-        dsApiResponse($dsId).QueryResult.Results[0]._refObjectName
+        dsApiResponse($dsId) | getName
     }
     if($getUuid){
-        dsApiResponse($dsId).QueryResult.Results[0]._refObjectUUID
+        dsApiResponse($dsId) | getUUID
     }
     if($copyUrlToClipboard){
-        $uuid = dsApiResponse($dsId).QueryResult.Results[0]._refObjectUUID 
+        $uuid = dsApiResponse($dsId) | getUUID
         "https://rally1.rallydev.com/#/detail/defectsuite/$uuid"  | clip
     }
     if($openInBrowser){
-        $uuid = dsApiResponse($dsId).QueryResult.Results[0]._refObjectUUID 
+        $uuid = dsApiResponse($dsId) | getUUID
         Start-Process "https://rally1.rallydev.com/#/detail/defectsuite/$uuid"
+    }
+    if($copyLongLinkToClipboard){
+        $dsData = dsApiResponse($dsId) 
+        $linkUrl = "https://rally1.rallydev.com/#/detail/defectsuite/$($dsData | getUUID)"
+        $linkText = "${$dsId} - $($dsData | getName )"
+        $linkHtml = "
+                <html>
+                <body>
+                <!--StartFragment-->
+                <a href='$linkUrl'>$linkText</a>
+                <!--EndFragment-->
+                </body>
+                </html>"
+        $linkHtml | clip
+    }
+    if($copyShortLinkToClipboard){
+        $dsData = dsApiResponse($dsId) 
+        $linkUrl = "https://rally1.rallydev.com/#/detail/defectsuite/$($dsData | getUUID)"
+        $linkHtml = "<html>
+                <body>
+                <!--StartFragment-->
+                <a href='$linkUrl'>$dsId</a>
+                <!--EndFragment-->
+                </body>
+                </html>"
+        $linkHtml | clip
+    }
+    if($triageHighPriority){
+        
+    }
+    if($triageLowPriority){
+        
+    }
+    if($divertToDev){
+        
+    }
+    if($syncPriorityToDefects){
+
+    }
+    if($triageUnshieldedProductDS){
+
     }
     if($help){
         Get-Help rqt
     }
-
 }
-rqt DS2820
